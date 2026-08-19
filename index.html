@@ -155,12 +155,17 @@ const passage = passageRows[0];
                     .eq("passage_id", PASSAGE_ID)
                     .order("question_id", { ascending: true });
 
-            if (questionError) {
-                status.textContent =
-                    "Error loading questions: " +
-                    questionError.message;
-                return;
-            }
+if (questionError) {
+    status.textContent =
+        "Passage loaded successfully. Questions are not connected yet.";
+    app.innerHTML = `
+        <section class="passage">
+            <h2>${escapeHTML(passage.title)}</h2>
+            <p>${formatText(passage.passage_text)}</p>
+        </section>
+    `;
+    return;
+}
 
             status.textContent =
                 "Loaded successfully: " +
