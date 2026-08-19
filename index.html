@@ -152,7 +152,6 @@ const passage = passageRows[0];
                 await supabase
                     .from("questions.1")
                     .select("*")
-                    .eq("passage_id", PASSAGE_ID)
                     .order("question_id", { ascending: true });
 
 if (questionError) {
