@@ -129,12 +129,11 @@
             const status = document.getElementById("status");
             const app = document.getElementById("app");
 
-            const { data: passage, error: passageError } =
-                await supabase
-                    .from("passages")
-                    .select("*")
-                    .eq("id", PASSAGE_ID)
-                    .single();
+const { data: passageRows, error: passageError } =
+    await supabase
+        .from("passages")
+        .select("*")
+        .eq("id", PASSAGE_ID);
 
             if (passageError) {
                 status.textContent =
@@ -142,7 +141,13 @@
                     passageError.message;
                 return;
             }
+if (!passageRows || passageRows.length === 0) {
+    status.textContent =
+        "Error loading passage: No matching passage found.";
+    return;
+}
 
+const passage = passageRows[0];
             const { data: questions, error: questionError } =
                 await supabase
                     .from("questions")
