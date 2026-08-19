@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVP Qbank — RNAP Test</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            line-height: 1.6;
+            color: #222;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-top: 0;
+        }
+
+        #status {
+            padding: 12px;
+            background: #f1f1f1;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .passage {
+            background: #f8f8f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .question {
+            border-top: 2px solid #ddd;
+            padding-top: 25px;
+            margin-top: 35px;
+        }
+
+        .choice {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .choice:hover {
+            background: #f5f5f5;
+        }
+
+        .choice.selected {
+            border: 2px solid #333;
+            background: #eeeeee;
+        }
+
+        .submit {
+            margin-top: 10px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            background: #222;
+            color: white;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .explanation {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f3f3f3;
+            border-radius: 8px;
+        }
+
+        .correct {
+            color: green;
+            font-weight: bold;
+        }
+
+        .incorrect {
+            color: #b00020;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>MVP Qbank</h1>
+    <p class="subtitle">RNAP Passage Test</p>
+
+    <div id="status">Loading passage and questions...</div>
+
+    <div id="app"></div>
+
+    <script type="module">
+
+        import { createClient }
+            from "https://esm.sh/@supabase/supabase-js@2";
+
+        const SUPABASE_URL =
+            "https://mldncjuynugboshlehvs.supabase.co";
+
+        const SUPABASE_KEY =
+            "sb_publishable_a1oDR32h5-nH3pr0EerqZg_9v1vRGZa";
+
+        const supabase = createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
+
+        const PASSAGE_ID =
+            "e0137043-7d61-4dd1-a2b4-ef7306437fcf";
+
+        async function loadQbank() {
+
+            const status = document.getElementById("status");
+            const app = document.getElementById("app");
+
+            const { data: passage, error: passageError } =
+                await supabase
+                    .from("passages")
+                    .select("*")
+                    .eq("id", PASSAGE_ID)
+                    .single();
+
+            if (passageError) {
+                status.textContent =
+                    "Error loading passage: " +
+                    passageError.message;
+                return;
+            }
+
+            const { data: questions, error: questionError } =
+                await supabase
+                    .from("questions")
+                    .select("*")
+                    .eq("passage_id", PASSAGE_ID)
+                    .order("question_id", { ascending: true });
+
+            if (questionError) {
+                status.textContent =
+                    "Error loading questions: " +
+                    questionError.message;
+                return;
+            }
+
+            status.textContent =
+                "Loaded successfully: " +
+                questions.length +
+                " questions";
+
+            let html = "";
+
+            html += `
+                <section class="passage">
+                    <h2>${escapeHTML(passage.title)}</h2>
+                    <p>${formatText(passage.passage_text)}</p>
+                </section>
+            `;
+
+            questions.forEach((question, index) => {
+
+                html += `
+                    <section class="question">
+                        <h2>Question ${index + 1}</h2>
+
+                        <p>
+                            <strong>
+                                ${escapeHTML(question.question_text)}
+                            </strong>
+                        </p>
+
+                        <button class="choice"
+                            data-question="${question.id}"
+                            data-answer="A">
+                            A. ${escapeHTML(question.choice_a)}
+                        </button>
+
+                        <button class="choice"
+                            data-question="${question.id}"
+                            data-answer="B">
+                            B. ${escapeHTML(question.choice_b)}
+                        </button>
+
+                        <button class="choice"
+                            data-question="${question.id}"
+                            data-answer="C">
+                            C. ${escapeHTML(question.choice_c)}
+                        </button>
+
+                        <button class="choice"
+                            data-question="${question.id}"
+                            data-answer="D">
+                            D. ${escapeHTML(question.choice_d)}
+                        </button>
+
+                        <button class="submit"
+                            data-submit="${question.id}">
+                            Submit Answer
+                        </button>
+
+                        <div
+                            id="result-${question.id}"
+                            class="explanation"
+                            style="display:none;">
+                        </div>
+                    </section>
+                `;
+            });
+
+            app.innerHTML = html;
+
+            setupQuestions(questions);
+        }
+
+        function setupQuestions(questions) {
+
+            questions.forEach(question => {
+
+                let selectedAnswer = null;
+
+                const choices =
+                    document.querySelectorAll(
+                        `[data-question="${question.id}"]`
+                    );
+
+                choices.forEach(choice => {
+
+                    choice.addEventListener("click", () => {
+
+                        choices.forEach(c =>
+                            c.classList.remove("selected")
+                        );
+
+                        choice.classList.add("selected");
+
+                        selectedAnswer =
+                            choice.dataset.answer;
+                    });
+                });
+
+                const submitButton =
+                    document.querySelector(
+                        `[data-submit="${question.id}"]`
+                    );
+
+                submitButton.addEventListener("click", () => {
+
+                    const result =
+                        document.getElementById(
+                            `result-${question.id}`
+                        );
+
+                    if (!selectedAnswer) {
+
+                        result.style.display = "block";
+
+                        result.innerHTML =
+                            "Please select an answer first.";
+
+                        return;
+                    }
+
+                    const isCorrect =
+                        selectedAnswer ===
+                        question.correct_answer;
+
+                    result.style.display = "block";
+
+                    result.innerHTML = `
+
+                        <p class="${
+                            isCorrect
+                                ? "correct"
+                                : "incorrect"
+                        }">
+
+                            ${
+                                isCorrect
+                                    ? "Correct!"
+                                    : "Incorrect."
+                            }
+
+                        </p>
+
+                        <p>
+                            <strong>
+                                Correct answer:
+                                ${question.correct_answer}
+                            </strong>
+                        </p>
+
+                        <p>
+                            ${formatText(question.explanation)}
+                        </p>
+                    `;
+                });
+            });
+        }
+
+        function escapeHTML(text) {
+
+            if (text === null || text === undefined) {
+                return "";
+            }
+
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function formatText(text) {
+
+            return escapeHTML(text)
+                .replace(/\n/g, "<br>");
+        }
+
+        loadQbank();
+
+    </script>
+
+</body>
+</html>
