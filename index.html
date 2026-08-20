@@ -148,6 +148,13 @@ if (!passageRows || passageRows.length === 0) {
 }
 
 const passage = passageRows[0];
+            const { data: passageImages, error: passageImageError } =
+    await supabase
+        .from("images")
+        .select("*")
+        .eq("passage_id", passage.id)
+        .eq("image_type", "passage_figure")
+        .order("display_order", { ascending: true });
             const { data: questions, error: questionError } =
                 await supabase
                     .from("questions.1")
@@ -173,12 +180,25 @@ if (questionError) {
 
             let html = "";
 
-            html += `
-                <section class="passage">
-                    <h2>${escapeHTML(passage.title)}</h2>
-                    <p>${formatText(passage.passage_text)}</p>
-                </section>
-            `;
+html += `
+    <section class="passage">
+        <h2>${escapeHTML(passage.title)}</h2>
+        <p>${formatText(passage.passage_text)}</p>
+
+        ${
+            passageImages && passageImages.length > 0
+                ? passageImages.map(image => `
+                    <img
+                        src="https://mldncjuynugboshlehvs.supabase.co/storage/v1/object/public/qbank-images/${image.file_path}"
+                        alt="Passage figure"
+                        style="max-width: 100%; margin-top: 20px;"
+                    >
+                `).join("")
+                : ""
+        }
+
+    </section>
+`;
 
             questions.forEach((question, index) => {
 
