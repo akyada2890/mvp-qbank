@@ -286,7 +286,7 @@ html += `
                         `[data-submit="${question.id}"]`
                     );
 
-                submitButton.addEventListener("click", () => {
+                submitButton.addEventListener("click", async () => {
 
                     const result =
                         document.getElementById(
@@ -309,33 +309,63 @@ html += `
 
                     result.style.display = "block";
 
-                    result.innerHTML = `
+              const { data: explanationImages } =
+    await supabase
+        .from("images")
+        .select("*")
+        .eq("question_id", question.id)
+        .eq("image_type", "explanation")
+        .order("display_order", { ascending: true });
 
-                        <p class="${
-                            isCorrect
-                                ? "correct"
-                                : "incorrect"
-                        }">
+let explanationHTML = formatText(question.explanation);
 
-                            ${
-                                isCorrect
-                                    ? "Correct!"
-                                    : "Incorrect."
-                            }
+if (explanationImages && explanationImages.length > 0) {
 
-                        </p>
+    explanationImages.forEach(image => {
 
-                        <p>
-                            <strong>
-                                Correct answer:
-                                ${question.correct_answer}
-                            </strong>
-                        </p>
+        const imageHTML = `
+            <img
+                src="https://mldncjuynugboshlehvs.supabase.co/storage/v1/object/public/qbank-images/${image.file_path}"
+                alt="Explanation diagram"
+                style="max-width: 100%; margin: 15px 0;"
+            >
+        `;
 
-                        <p>
-                            ${formatText(question.explanation)}
-                        </p>
-                    `;
+        explanationHTML = explanationHTML.replace(
+            "See diagram:",
+            "See diagram:" + imageHTML
+        );
+
+    });
+}
+
+result.innerHTML = `
+
+    <p class="${
+        isCorrect
+            ? "correct"
+            : "incorrect"
+    }">
+
+        ${
+            isCorrect
+                ? "Correct!"
+                : "Incorrect."
+        }
+
+    </p>
+
+    <p>
+        <strong>
+            Correct answer:
+            ${question.correct_answer}
+        </strong>
+    </p>
+
+    <p>
+        ${explanationHTML}
+    </p>
+`;
                 });
             });
         }
