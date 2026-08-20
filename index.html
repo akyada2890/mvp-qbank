@@ -155,6 +155,12 @@ const passage = passageRows[0];
         .eq("passage_id", passage.id)
         .eq("image_type", "passage_figure")
         .order("display_order", { ascending: true });
+            console.log(
+    "Question:",
+    question.id,
+    "Explanation images:",
+    explanationImages
+);
             const { data: questions, error: questionError } =
                 await supabase
                     .from("questions.1")
